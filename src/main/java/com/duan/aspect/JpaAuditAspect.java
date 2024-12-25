@@ -2,6 +2,8 @@ package com.duan.aspect;
 
 import com.duan.config.AuditConfig;
 import com.duan.enums.OperationType;
+import com.duan.metadata.ColumnMetadata;
+import com.duan.metadata.TableMetadataProvider;
 import com.duan.service.EnhancedAuditService;
 import com.duan.utils.SQLInfo;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import javax.persistence.Column;
+import javax.persistence.Id;
 import javax.persistence.Table;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -25,6 +29,7 @@ import java.util.Map;
 public class JpaAuditAspect {
     private final EnhancedAuditService enhancedAuditService;
     private final AuditConfig auditConfig;
+    private final TableMetadataProvider metadataProvider;
 
     @Around("execution(* javax.persistence.EntityManager.persist(..)) || " +
             "execution(* javax.persistence.EntityManager.merge(..)) || " +
@@ -41,23 +46,33 @@ public class JpaAuditAspect {
 
         Object entity = args[0];
         String methodName = point.getSignature().getName();
+        String tableName = getTableName(entity);
+
+        Map<String, ColumnMetadata> tableMetadata = metadataProvider.getTableMetadata(tableName);
 
         // 获取实体信息
         SQLInfo sqlInfo = new SQLInfo();
-        sqlInfo.setTableName(getTableName(entity));
+        sqlInfo.setTableName(tableName);
 
         // 设置操作类型
         switch (methodName) {
             case "persist":
                 sqlInfo.setOperationType(OperationType.INSERT);
+                sqlInfo.setNewData(getEntityData(entity));
                 break;
             case "merge":
                 sqlInfo.setOperationType(OperationType.UPDATE);
-                sqlInfo.setOldData(getEntityData(entity));
+                Map<String, Object> primaryKeyData = getPrimaryKeyData(entity, tableMetadata);
+                if (!primaryKeyData.isEmpty()) {
+                    sqlInfo.setOldData(metadataProvider.getCompleteRowData(tableName, primaryKeyData));
+                }
                 break;
             case "remove":
                 sqlInfo.setOperationType(OperationType.DELETE);
-                sqlInfo.setOldData(getEntityData(entity));
+                primaryKeyData = getPrimaryKeyData(entity, tableMetadata);
+                if (!primaryKeyData.isEmpty()) {
+                    sqlInfo.setOldData(metadataProvider.getCompleteRowData(tableName, primaryKeyData));
+                }
                 break;
         }
 
@@ -66,7 +81,10 @@ public class JpaAuditAspect {
 
         // 获取新数据
         if (methodName.equals("persist") || methodName.equals("merge")) {
-            sqlInfo.setNewData(getEntityData(entity));
+            Map<String, Object> newPrimaryKeyData = getPrimaryKeyData(entity, tableMetadata);
+            if (!newPrimaryKeyData.isEmpty()) {
+                sqlInfo.setNewData(metadataProvider.getCompleteRowData(tableName, newPrimaryKeyData));
+            }
         }
 
         try {
@@ -90,18 +108,49 @@ public class JpaAuditAspect {
     private Map<String, Object> getEntityData(Object entity) {
         Map<String, Object> data = new HashMap<>();
         for (Field field : entity.getClass().getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers()) ||
+                    Modifier.isTransient(field.getModifiers())) {
+                continue;
+            }
+
             field.setAccessible(true);
             try {
-                // 排除静态字段和瞬时字段
-                if (!Modifier.isStatic(field.getModifiers()) &&
-                        !Modifier.isTransient(field.getModifiers())) {
-                    data.put(field.getName(), field.get(entity));
-                }
+                Column column = field.getAnnotation(Column.class);
+                String columnName = (column != null && StringUtils.hasText(column.name()))
+                        ? column.name()
+                        : field.getName();
+
+                data.put(columnName, field.get(entity));
             } catch (Exception e) {
                 log.error("Get field value failed", e);
             }
         }
         return data;
+    }
+
+    private Map<String, Object> getPrimaryKeyData(Object entity, Map<String, ColumnMetadata> metadata) {
+        Map<String, Object> primaryKeyData = new HashMap<>();
+
+        for (Field field : entity.getClass().getDeclaredFields()) {
+            if (field.isAnnotationPresent(Id.class)) {
+                field.setAccessible(true);
+                try {
+                    Column column = field.getAnnotation(Column.class);
+                    String columnName = (column != null && StringUtils.hasText(column.name()))
+                            ? column.name()
+                            : field.getName();
+
+                    Object value = field.get(entity);
+                    if (value != null) {
+                        primaryKeyData.put(columnName, value);
+                    }
+                } catch (Exception e) {
+                    log.error("Get primary key value failed", e);
+                }
+            }
+        }
+
+        return primaryKeyData;
     }
 
 }

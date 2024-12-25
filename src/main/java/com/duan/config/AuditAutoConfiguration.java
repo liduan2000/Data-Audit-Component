@@ -71,8 +71,9 @@ public class AuditAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JpaAuditAspect jpaAuditAspect(EnhancedAuditService enhancedAuditService,
-                                         AuditConfig auditConfig) {
-        return new JpaAuditAspect(enhancedAuditService, auditConfig);
+                                         AuditConfig auditConfig,
+                                         TableMetadataProvider tableMetadataProvider) {
+        return new JpaAuditAspect(enhancedAuditService, auditConfig, tableMetadataProvider);
     }
 
     @Bean
