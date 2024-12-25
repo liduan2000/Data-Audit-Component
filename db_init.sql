@@ -9,8 +9,8 @@ CREATE TABLE sys_data_audit_log (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     table_name VARCHAR(100) NOT NULL,
     operation_type VARCHAR(20) NOT NULL,
-    primary_key_name VARCHAR(50),
-    primary_key_value VARCHAR(100),
+--     primary_key_name VARCHAR(50),
+--     primary_key_value VARCHAR(100),
     old_value TEXT,
     new_value TEXT,
     operator VARCHAR(100),
@@ -22,5 +22,8 @@ CREATE TABLE test_user (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    age INT
+    age INT,
+    country VARCHAR(100) DEFAULT 'Unknown',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

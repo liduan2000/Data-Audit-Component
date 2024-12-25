@@ -2,45 +2,77 @@ package com.duan.config;
 
 import com.duan.aspect.JdbcTemplateAuditAspect;
 import com.duan.aspect.JpaAuditAspect;
+import com.duan.metadata.MySqlTableMetadataProvider;
+import com.duan.metadata.TableMetadataProvider;
 import com.duan.repository.DataAuditLogRepository;
-import com.duan.service.AuditService;
+import com.duan.service.EnhancedAuditService;
+import com.duan.utils.EnhancedSQLParser;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
+import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 
 @Configuration
 @EnableAsync
+@EnableCaching
 @EnableConfigurationProperties(AuditConfig.class)
 @ConditionalOnProperty(prefix = "audit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class AuditAutoConfiguration {
-
     @Bean
-    @ConditionalOnMissingBean
-    public AuditService auditService(AuditConfig auditConfig,
-                                     DataAuditLogRepository auditLogRepository,
-                                     JdbcTemplate jdbcTemplate) {
-        return new AuditService(auditConfig, auditLogRepository, jdbcTemplate);
+    public CacheManager cacheManager() {
+        SimpleCacheManager cacheManager = new SimpleCacheManager();
+        cacheManager.setCaches(Arrays.asList(
+                new ConcurrentMapCache("tableMetadata")
+        ));
+        return cacheManager;
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public JdbcTemplateAuditAspect jdbcTemplateAuditAspect(AuditService auditService,
-                                                           AuditConfig auditConfig) {
-        return new JdbcTemplateAuditAspect(auditService, auditConfig);
+    public TableMetadataProvider tableMetadataProvider(JdbcTemplate jdbcTemplate,
+                                                       CacheManager cacheManager) {
+        return new MySqlTableMetadataProvider(jdbcTemplate, cacheManager);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public JpaAuditAspect jpaAuditAspect(AuditService auditService,
+    public EnhancedSQLParser enhancedSQLParser(TableMetadataProvider metadataProvider) {
+        return new EnhancedSQLParser(metadataProvider);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public EnhancedAuditService auditService(AuditConfig auditConfig,
+                                             DataAuditLogRepository auditLogRepository,
+                                             JdbcTemplate jdbcTemplate,
+                                             TableMetadataProvider tableMetadataProvider) {
+        return new EnhancedAuditService(auditConfig, auditLogRepository, jdbcTemplate, tableMetadataProvider);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JdbcTemplateAuditAspect jdbcTemplateAuditAspect(EnhancedAuditService enhancedAuditService,
+                                                           AuditConfig auditConfig,
+                                                           EnhancedSQLParser sqlParser) {
+        return new JdbcTemplateAuditAspect(enhancedAuditService, auditConfig, sqlParser);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JpaAuditAspect jpaAuditAspect(EnhancedAuditService enhancedAuditService,
                                          AuditConfig auditConfig) {
-        return new JpaAuditAspect(auditService, auditConfig);
+        return new JpaAuditAspect(enhancedAuditService, auditConfig);
     }
 
     @Bean

@@ -2,7 +2,7 @@ package com.duan.aspect;
 
 import com.duan.config.AuditConfig;
 import com.duan.enums.OperationType;
-import com.duan.service.AuditService;
+import com.duan.service.EnhancedAuditService;
 import com.duan.utils.SQLInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JpaAuditAspect {
-    private final AuditService auditService;
+    private final EnhancedAuditService enhancedAuditService;
     private final AuditConfig auditConfig;
 
     @Around("execution(* javax.persistence.EntityManager.persist(..)) || " +
@@ -71,7 +71,7 @@ public class JpaAuditAspect {
 
         try {
             // 记录审计日志
-            auditService.saveAuditLog(sqlInfo);
+            enhancedAuditService.saveAuditLog(sqlInfo);
         } catch (Exception e) {
             log.error("Audit failed", e);
         }
@@ -103,4 +103,5 @@ public class JpaAuditAspect {
         }
         return data;
     }
+
 }

@@ -25,16 +25,17 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuditService {
-    private final AuditConfig auditConfig;
-    private final DataAuditLogRepository dataAuditLogRepository;
-    private final JdbcTemplate jdbcTemplate;
+    protected final AuditConfig auditConfig;
+    protected final DataAuditLogRepository dataAuditLogRepository;
+    protected final JdbcTemplate jdbcTemplate;
 
     @Async("auditExecutor")
     public void saveAuditLog(SQLInfo sqlInfo) {
         if (!needAudit(sqlInfo)) {
+            log.debug("no needAudit");
             return;
         }
-
+        log.debug("needAudit");
         try {
             DataAuditLog log = createAuditLog(sqlInfo);
             dataAuditLogRepository.save(log);
@@ -76,6 +77,10 @@ public class AuditService {
 
         String tableName = sqlInfo.getTableName();
 
+        if (tableName.equals("sys_data_audit_log")) {
+            return false;
+        }
+
         if (auditConfig.getIncludeTables() != null &&
                 !auditConfig.getIncludeTables().isEmpty() &&
                 !auditConfig.getIncludeTables().contains(tableName)) {
@@ -83,6 +88,7 @@ public class AuditService {
         }
 
         if (auditConfig.getExcludeTables() != null &&
+                !auditConfig.getExcludeTables().isEmpty() &&
                 auditConfig.getExcludeTables().contains(tableName)) {
             return false;
         }
@@ -111,13 +117,16 @@ public class AuditService {
     }
 
     private Map<String, Object> filterColumns(String tableName, Map<String, Object> data) {
+        if (auditConfig.getIncludeColumns() == null) {
+            return data;
+        }
         List<String> includeColumns = auditConfig.getIncludeColumns().get(tableName);
         if (includeColumns == null || includeColumns.isEmpty()) {
             return data;
         }
 
         return data.entrySet().stream()
-                .filter(e -> includeColumns.contains(e.getKey()))
+                .filter(entry -> includeColumns.contains(entry.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 

@@ -32,12 +32,12 @@ public class YourApplication {
 audit:
   enabled: true
   includeTables:
-    - user
-    - order
+    - users
+    - orders
   excludeTables:
     - temp_table
   includeColumns:
-    user:
+    users:
       - name
       - email
   async: true
@@ -64,3 +64,5 @@ source db_init.sql
 2. 可以添加 API 接口查询审计日志
 3. 可以实现 Web 界面展示审计数据
 4. 可以添加数据压缩和清理功能
+
+要做的事情：检查支持的sql标准。多表操作是否可以审计。默认值和自增值等是否可以审计。

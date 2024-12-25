@@ -19,7 +19,7 @@ import java.util.Map;
 @Slf4j
 public class SQLParser {
 
-    public static SQLInfo parseSql(String sql) {
+    public SQLInfo parseSql(String sql) {
         try {
             SQLStatement statement = SQLUtils.parseSingleStatement(sql, DbType.mysql);
             SQLInfo sqlInfo = new SQLInfo();

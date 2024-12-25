@@ -2,9 +2,9 @@ package com.duan.aspect;
 
 import com.duan.config.AuditConfig;
 import com.duan.enums.OperationType;
-import com.duan.service.AuditService;
+import com.duan.service.EnhancedAuditService;
+import com.duan.utils.EnhancedSQLParser;
 import com.duan.utils.SQLInfo;
-import com.duan.utils.SQLParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -19,8 +19,9 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JdbcTemplateAuditAspect {
-    private final AuditService auditService;
+    private final EnhancedAuditService enhancedAuditService;
     private final AuditConfig auditConfig;
+    private final EnhancedSQLParser enhancedSQLParser;
 
     @Around("execution(* org.springframework.jdbc.core.JdbcTemplate.*(String, ..))")
     public Object around(ProceedingJoinPoint point) throws Throwable {
@@ -32,7 +33,7 @@ public class JdbcTemplateAuditAspect {
         String sql = (String) args[0];
 
         // 解析SQL
-        SQLInfo sqlInfo = SQLParser.parseSql(sql);
+        SQLInfo sqlInfo = enhancedSQLParser.parseSql(sql);
         if (sqlInfo == null || sqlInfo.getOperationType() == null) {
             return point.proceed();
         }
@@ -41,7 +42,7 @@ public class JdbcTemplateAuditAspect {
         if (sqlInfo.getOperationType() == OperationType.UPDATE ||
                 sqlInfo.getOperationType() == OperationType.DELETE) {
             try {
-                Map<String, Object> beforeData = auditService.getBeforeData(sqlInfo);
+                Map<String, Object> beforeData = enhancedAuditService.getBeforeData(sqlInfo);
                 sqlInfo.setOldData(beforeData);
             } catch (Exception e) {
                 log.error("Get before data failed", e);
@@ -55,7 +56,7 @@ public class JdbcTemplateAuditAspect {
         if (sqlInfo.getOperationType() == OperationType.INSERT ||
                 sqlInfo.getOperationType() == OperationType.UPDATE) {
             try {
-                Map<String, Object> afterData = auditService.getAfterData(sqlInfo);
+                Map<String, Object> afterData = enhancedAuditService.getAfterData(sqlInfo);
                 sqlInfo.setNewData(afterData);
             } catch (Exception e) {
                 log.error("Get after data failed", e);
@@ -64,7 +65,7 @@ public class JdbcTemplateAuditAspect {
 
         try {
             // 记录审计日志
-            auditService.saveAuditLog(sqlInfo);
+            enhancedAuditService.saveAuditLog(sqlInfo);
         } catch (Exception e) {
             log.error("Audit failed", e);
         }
