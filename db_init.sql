@@ -1,4 +1,6 @@
 DROP TABLE IF EXISTS sys_data_audit_log;
+-- DROP TABLE IF EXISTS test_user;
+-- DROP TABLE IF EXISTS test_record;
 DROP DATABASE IF EXISTS sys_audit_db;
 
 CREATE DATABASE IF NOT EXISTS sys_audit_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -18,12 +20,19 @@ CREATE TABLE sys_data_audit_log (
     remark VARCHAR(500)
 );
 
-CREATE TABLE test_user (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    age INT,
-    country VARCHAR(100) DEFAULT 'Unknown',
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- CREATE TABLE test_user (
+--     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--     name VARCHAR(255) NOT NULL,
+--     email VARCHAR(255) UNIQUE NOT NULL,
+--     age INT,
+--     country VARCHAR(100) DEFAULT 'Unknown',
+--     is_active BOOLEAN DEFAULT TRUE,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+--
+-- CREATE TABLE test_record (
+--     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--     user_id BIGINT NOT NULL,
+--     name VARCHAR(255) UNIQUE NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
