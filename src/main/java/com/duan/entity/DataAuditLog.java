@@ -15,8 +15,8 @@ public class DataAuditLog {
 
     private String tableName;        // 表名
     private String operationType;    // 操作类型：INSERT/UPDATE/DELETE
-    private String primaryKeyName;   // 主键名
-    private String primaryKeyValue;  // 主键值
+    //    private String primaryKeyName;   // 主键名
+//    private String primaryKeyValue;  // 主键值
     private String oldValue;         // 修改前的值(JSON)
     private String newValue;         // 修改后的值(JSON)
     private String operator;         // 操作人

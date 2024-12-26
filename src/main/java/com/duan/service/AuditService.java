@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ public class AuditService {
     protected final DataAuditLogRepository dataAuditLogRepository;
     protected final JdbcTemplate jdbcTemplate;
 
-    @Async("auditExecutor")
+    //    @Async("auditExecutor")
     public void saveAuditLog(SQLInfo sqlInfo) {
         if (!needAudit(sqlInfo)) {
             log.debug("no needAudit");
@@ -70,7 +69,7 @@ public class AuditService {
         return getBeforeData(sqlInfo);
     }
 
-    private boolean needAudit(SQLInfo sqlInfo) {
+    protected boolean needAudit(SQLInfo sqlInfo) {
         if (!auditConfig.isEnabled()) {
             return false;
         }
@@ -96,7 +95,7 @@ public class AuditService {
         return true;
     }
 
-    private DataAuditLog createAuditLog(SQLInfo sqlInfo) {
+    protected DataAuditLog createAuditLog(SQLInfo sqlInfo) {
         DataAuditLog log = new DataAuditLog();
         log.setTableName(sqlInfo.getTableName());
         log.setOperationType(sqlInfo.getOperationType().toString());
@@ -148,7 +147,10 @@ public class AuditService {
     private String getCurrentOperator() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            return auth != null ? auth.getName() : "SYSTEM";
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+                return "SYSTEM";
+            }
+            return auth.getName();
         } catch (Exception e) {
             return "SYSTEM";
         }

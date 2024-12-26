@@ -4,7 +4,7 @@ import com.duan.config.AuditConfig;
 import com.duan.enums.OperationType;
 import com.duan.metadata.ColumnMetadata;
 import com.duan.metadata.TableMetadataProvider;
-import com.duan.service.EnhancedAuditService;
+import com.duan.service.TransactionAwareEnhancedAuditService;
 import com.duan.utils.SQLInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JpaAuditAspect {
-    private final EnhancedAuditService enhancedAuditService;
+    private final TransactionAwareEnhancedAuditService transactionAwareEnhancedAuditService;
     private final AuditConfig auditConfig;
     private final TableMetadataProvider metadataProvider;
 
@@ -89,7 +89,7 @@ public class JpaAuditAspect {
 
         try {
             // 记录审计日志
-            enhancedAuditService.saveAuditLog(sqlInfo);
+            transactionAwareEnhancedAuditService.saveAuditLog(sqlInfo);
         } catch (Exception e) {
             log.error("Audit failed", e);
         }

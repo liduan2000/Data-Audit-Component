@@ -2,7 +2,7 @@ package com.duan.aspect;
 
 import com.duan.config.AuditConfig;
 import com.duan.enums.OperationType;
-import com.duan.service.EnhancedAuditService;
+import com.duan.service.TransactionAwareEnhancedAuditService;
 import com.duan.utils.EnhancedSQLParser;
 import com.duan.utils.SQLInfo;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JdbcTemplateAuditAspect {
-    private final EnhancedAuditService enhancedAuditService;
+    private final TransactionAwareEnhancedAuditService transactionAwareEnhancedAuditService;
     private final AuditConfig auditConfig;
     private final EnhancedSQLParser enhancedSQLParser;
 
@@ -42,7 +42,7 @@ public class JdbcTemplateAuditAspect {
         if (sqlInfo.getOperationType() == OperationType.UPDATE ||
                 sqlInfo.getOperationType() == OperationType.DELETE) {
             try {
-                Map<String, Object> beforeData = enhancedAuditService.getBeforeData(sqlInfo);
+                Map<String, Object> beforeData = transactionAwareEnhancedAuditService.getBeforeData(sqlInfo);
                 sqlInfo.setOldData(beforeData);
             } catch (Exception e) {
                 log.error("Get before data failed", e);
@@ -56,7 +56,7 @@ public class JdbcTemplateAuditAspect {
         if (sqlInfo.getOperationType() == OperationType.INSERT ||
                 sqlInfo.getOperationType() == OperationType.UPDATE) {
             try {
-                Map<String, Object> afterData = enhancedAuditService.getAfterData(sqlInfo);
+                Map<String, Object> afterData = transactionAwareEnhancedAuditService.getAfterData(sqlInfo);
                 sqlInfo.setNewData(afterData);
             } catch (Exception e) {
                 log.error("Get after data failed", e);
@@ -65,7 +65,7 @@ public class JdbcTemplateAuditAspect {
 
         try {
             // 记录审计日志
-            enhancedAuditService.saveAuditLog(sqlInfo);
+            transactionAwareEnhancedAuditService.saveAuditLog(sqlInfo);
         } catch (Exception e) {
             log.error("Audit failed", e);
         }
